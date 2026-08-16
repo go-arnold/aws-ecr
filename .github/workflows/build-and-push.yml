@@ -3,6 +3,10 @@ name: Build and Push to ECR
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'infra/**'
+      - '*.png'
+      - '*.md'
 
 permissions:
   id-token: write
