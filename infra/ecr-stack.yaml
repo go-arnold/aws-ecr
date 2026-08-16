@@ -2,6 +2,7 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: >
   Private ECR repository and a least-privilege IAM role assumable only by
   GitHub Actions (via OIDC) in a specific repo/branch, for pushing images.
+  I have now linked this to the infrastructure repo with gitsync enabled
 
 Parameters:
   GithubOwner:
