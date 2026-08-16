@@ -1,0 +1,10 @@
+template-file-path: infra/ecr-stack.yaml
+parameters:
+  GithubRepositoryOwnerId: '161593548'
+  GithubBranch: main
+  GithubRepositoryId: '1335773383'
+  GithubRepo: aws-ecr
+  GithubOidcProviderArn: arn:aws:iam::107737161507:oidc-provider/token.actions.githubusercontent.com
+  GithubOwner: go-arnold
+  EcrRepositoryName: renting-with-arnold
+tags: {}
