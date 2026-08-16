@@ -1,0 +1,108 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Private ECR repository and a least-privilege IAM role assumable only by
+  GitHub Actions (via OIDC) in a specific repo/branch, for pushing images.
+
+Parameters:
+  GithubOrgRepo:
+    Type: String
+    Default: go-arnold/aws-ecr
+    Description: GitHub "org/repo" allowed to assume the deployment role.
+
+  GithubBranch:
+    Type: String
+    Default: main
+    Description: Only workflow runs on this branch may assume the role.
+
+  GithubOidcProviderArn:
+    Type: String
+    Default: arn:aws:iam::107737161507:oidc-provider/token.actions.githubusercontent.com
+    Description: ARN of the (already registered) GitHub OIDC provider in this account.
+
+  EcrRepositoryName:
+    Type: String
+    Default: renting-with-arnold
+
+  GithubRepositoryId:
+    Type: String
+    Default: "1335773383"
+    Description: Immutable numeric GitHub repository ID (survives renames).
+
+  GithubRepositoryOwnerId:
+    Type: String
+    Default: "161593548"
+    Description: Immutable numeric GitHub org/owner ID (survives renames).
+
+Resources:
+  GithubActionsEcrPushRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: github-actions-ecr-push-renting-with-arnold
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !Ref GithubOidcProviderArn
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+                token.actions.githubusercontent.com:sub: !Sub "repo:${GithubOrgRepo}:ref:refs/heads/${GithubBranch}"
+                token.actions.githubusercontent.com:repository_id: !Ref GithubRepositoryId
+                token.actions.githubusercontent.com:repository_owner_id: !Ref GithubRepositoryOwnerId
+      Policies:
+        - PolicyName: EcrPushLeastPrivilege
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: GetAuthToken
+                Effect: Allow
+                Action: ecr:GetAuthorizationToken
+                Resource: "*"
+              - Sid: PushToRentingAppRepo
+                Effect: Allow
+                Action:
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:InitiateLayerUpload
+                  - ecr:UploadLayerPart
+                  - ecr:CompleteLayerUpload
+                  - ecr:PutImage
+                Resource: !Sub "arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/${EcrRepositoryName}"
+      Tags:
+        - Key: Project
+          Value: renting-with-arnold
+        - Key: ManagedBy
+          Value: CloudFormation
+
+  AppEcrRepo:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Ref EcrRepositoryName
+      ImageTagMutability: MUTABLE
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      RepositoryPolicyText:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowPushOnlyFromGithubActionsRole
+            Effect: Allow
+            Principal:
+              AWS: !GetAtt GithubActionsEcrPushRole.Arn
+            Action:
+              - ecr:BatchCheckLayerAvailability
+              - ecr:InitiateLayerUpload
+              - ecr:UploadLayerPart
+              - ecr:CompleteLayerUpload
+              - ecr:PutImage
+      Tags:
+        - Key: Project
+          Value: renting-with-arnold
+        - Key: ManagedBy
+          Value: CloudFormation
+
+Outputs:
+  RoleArn:
+    Value: !GetAtt GithubActionsEcrPushRole.Arn
+  RepositoryUri:
+    Value: !GetAtt AppEcrRepo.RepositoryUri
