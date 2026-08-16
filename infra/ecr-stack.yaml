@@ -4,10 +4,15 @@ Description: >
   GitHub Actions (via OIDC) in a specific repo/branch, for pushing images.
 
 Parameters:
-  GithubOrgRepo:
+  GithubOwner:
     Type: String
-    Default: go-arnold/aws-ecr
-    Description: GitHub "org/repo" allowed to assume the deployment role.
+    Default: go-arnold
+    Description: GitHub account/org that owns the repo.
+
+  GithubRepo:
+    Type: String
+    Default: aws-ecr
+    Description: GitHub repo name (without owner).
 
   GithubBranch:
     Type: String
@@ -48,7 +53,7 @@ Resources:
             Condition:
               StringEquals:
                 token.actions.githubusercontent.com:aud: sts.amazonaws.com
-                token.actions.githubusercontent.com:sub: !Sub "repo:${GithubOrgRepo}:ref:refs/heads/${GithubBranch}"
+                token.actions.githubusercontent.com:sub: !Sub "repo:${GithubOwner}@${GithubRepositoryOwnerId}/${GithubRepo}@${GithubRepositoryId}:ref:refs/heads/${GithubBranch}"
                 token.actions.githubusercontent.com:repository_id: !Ref GithubRepositoryId
                 token.actions.githubusercontent.com:repository_owner_id: !Ref GithubRepositoryOwnerId
       Policies:
