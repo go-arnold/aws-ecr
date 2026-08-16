@@ -1,0 +1,4 @@
+template-file-path: infra/ecr-stack.yaml
+parameters: {}
+tags:
+  name: ecr-lab
